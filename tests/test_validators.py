@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from core.validators import is_private_address, validate_url
+from core.validators import is_private_address, split_target, validate_url
 
 
 @pytest.mark.parametrize(
@@ -27,7 +27,6 @@ def test_valid_public_urls(url: str) -> None:
     [
         ("", "enter a target URL"),
         ("   ", "enter a target URL"),
-        ("example.com", "Missing protocol"),
         ("ftp://example.com", "Only HTTP and HTTPS"),
         ("file:///etc/passwd", "Only HTTP and HTTPS"),
         ("ws://example.com", "Only HTTP and HTTPS"),
@@ -38,6 +37,17 @@ def test_invalid_urls(url: str, fragment: str) -> None:
     result = validate_url(url, allow_private=False)
     assert not result.ok
     assert fragment.lower() in result.message.lower()
+
+
+def test_missing_scheme_defaults_to_https() -> None:
+    result = validate_url("example.com/page", allow_private=True)
+    assert result.ok
+    assert result.normalized_url == "https://example.com/page"
+
+
+def test_split_target_moves_page_into_paths() -> None:
+    assert split_target("https://a.com/blog?x=1", ["/"]) == ("https://a.com", ["/blog?x=1"])
+    assert split_target("https://a.com/", ["/", "/b"]) == ("https://a.com", ["/", "/b"])
 
 
 def test_fragment_is_stripped() -> None:

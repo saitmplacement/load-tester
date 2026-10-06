@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field
 from config.settings import get_settings
 from core.database import HistoryDatabase, summaries_to_csv, summaries_to_json
 from core.test_manager import LoadTest
-from core.validators import validate_url
+from core.validators import split_target, validate_url
 from models.schemas import SafetyThresholds, TestConfig, TestResultStatus
 
 logger = logging.getLogger("loadtester.api")
@@ -191,11 +191,12 @@ def start_test(req: StartRequest) -> dict:
 
     users = settings.clamp_users(req.virtual_users)
     duration = settings.clamp_duration(req.duration_seconds)
+    origin, paths = split_target(result.normalized_url, req.paths or ["/"])
 
     try:
         config = TestConfig(
-            target_url=result.normalized_url,
-            paths=req.paths or ["/"],
+            target_url=origin,
+            paths=paths,
             method=req.method,
             virtual_users=users,
             spawn_rate=req.spawn_rate,

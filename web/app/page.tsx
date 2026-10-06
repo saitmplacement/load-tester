@@ -26,7 +26,7 @@ export default function DashboardPage() {
   const [customDuration, setCustomDuration] = useState(60);
   const [timeout, setTimeoutS] = useState(10);
   const [method, setMethod] = useState("GET");
-  const [pathsText, setPathsText] = useState("/\n/about\n/contact\n/products");
+  const [pathsText, setPathsText] = useState("/");
   const [allowPrivate, setAllowPrivate] = useState(false);
   const [authorized, setAuthorized] = useState(false);
   const [errThreshold, setErrThreshold] = useState(5);

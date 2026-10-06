@@ -188,6 +188,7 @@ class LoadTest:
             timeout=timeout,
             headers=headers,
             follow_redirects=True,
+            verify=False,  # measure load, not certificate hygiene (works on any site)
         ) as client:
             spawner = asyncio.create_task(
                 self._spawn_workers(client, worker_tasks, deadline)

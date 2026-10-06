@@ -77,6 +77,38 @@ def _ip_is_private(ip: ipaddress._BaseAddress) -> bool:
     )
 
 
+def _unresolvable(host: str) -> bool:
+    """True if ``host`` is a name (not an IP literal) that DNS cannot resolve."""
+    try:
+        ipaddress.ip_address(host)
+        return False
+    except ValueError:
+        pass
+    if host.lower() in _LOCAL_HOSTNAMES:
+        return False
+    try:
+        socket.getaddrinfo(host, None)
+        return False
+    except socket.gaierror:
+        return True
+
+
+def split_target(normalized_url: str, paths: list[str]) -> tuple[str, list[str]]:
+    """Split a full URL into (origin, paths).
+
+    ``https://site.com/blog?page=2`` becomes ``("https://site.com", ["/blog?page=2"])``
+    when the caller left the paths at the default ``["/"]``.
+    """
+    parsed = urlparse(normalized_url)
+    origin = f"{parsed.scheme}://{parsed.netloc}"
+    page = parsed.path or "/"
+    if parsed.query:
+        page += "?" + parsed.query
+    if page != "/" and (not paths or paths == ["/"]):
+        return origin, [page]
+    return origin, paths or ["/"]
+
+
 def validate_url(url: str, allow_private: bool = False) -> ValidationResult:
     """Validate a target URL.
 
@@ -93,12 +125,10 @@ def validate_url(url: str, allow_private: bool = False) -> ValidationResult:
         return ValidationResult(False, "Please enter a target URL.")
 
     candidate = url.strip()
+    # Accept "example.com" / "www.example.com/page" by assuming https.
+    if "://" not in candidate:
+        candidate = "https://" + candidate.lstrip("/")
     parsed = urlparse(candidate)
-
-    if not parsed.scheme:
-        return ValidationResult(
-            False, "Missing protocol. The URL must start with http:// or https://."
-        )
 
     if parsed.scheme.lower() not in ALLOWED_SCHEMES:
         return ValidationResult(
@@ -110,6 +140,13 @@ def validate_url(url: str, allow_private: bool = False) -> ValidationResult:
 
     if parsed.port is not None and not (0 < parsed.port <= 65535):
         return ValidationResult(False, f"Invalid port: {parsed.port}.")
+
+    if not allow_private and _unresolvable(parsed.hostname):
+        return ValidationResult(
+            False,
+            f"Could not find '{parsed.hostname}'. Check the spelling of the "
+            "website address and your internet connection.",
+        )
 
     if not allow_private and is_private_address(parsed.hostname):
         return ValidationResult(

@@ -53,10 +53,10 @@ def test_zero_users_rejected() -> None:
         _valid_config(virtual_users=0)
 
 
-def test_ramp_longer_than_duration_rejected() -> None:
-    # 1000 users at 1/sec = 1000s ramp, but only 60s duration.
-    with pytest.raises(ValidationError):
-        _valid_config(virtual_users=1000, spawn_rate=1.0, duration_seconds=60)
+def test_slow_ramp_is_auto_sped_up() -> None:
+    # 1000 users at 1/sec would take 1000s; ramp is sped up to fit in half the test.
+    cfg = _valid_config(virtual_users=1000, spawn_rate=1.0, duration_seconds=60)
+    assert cfg.virtual_users / cfg.spawn_rate <= 30
 
 
 def test_settings_clamp_users_and_duration() -> None:

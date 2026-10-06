@@ -7,6 +7,7 @@ results that are persisted to SQLite and exported.
 
 from __future__ import annotations
 
+import math
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
@@ -146,16 +147,12 @@ class TestConfig(BaseModel):
         return cleaned or ["/"]
 
     @model_validator(mode="after")
-    def _ramp_not_longer_than_test(self) -> "TestConfig":
-        # Ramp-up must fit inside the test window, otherwise the test would end
-        # before peak load is ever reached.
-        ramp_seconds = self.virtual_users / self.spawn_rate
-        if ramp_seconds > self.duration_seconds:
-            raise ValueError(
-                f"Ramp-up would take {ramp_seconds:.0f}s at {self.spawn_rate} "
-                f"users/sec, which exceeds the {self.duration_seconds}s duration. "
-                "Increase duration or spawn rate, or lower virtual users."
-            )
+    def _fit_ramp_into_test(self) -> "TestConfig":
+        # Ramp-up must leave time at peak load. Instead of rejecting the config,
+        # speed the ramp up so it finishes within half of the test window.
+        max_ramp_seconds = max(1.0, self.duration_seconds * 0.5)
+        if self.virtual_users / self.spawn_rate > max_ramp_seconds:
+            self.spawn_rate = math.ceil(self.virtual_users / max_ramp_seconds)
         return self
 
 
