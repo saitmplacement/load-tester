@@ -1,0 +1,45 @@
+# Optional distributed load-generation cluster (Locust master + workers).
+#
+# This is the correct architecture for LARGE authorized tests that a single
+# machine cannot generate on its own. The default local mode (Streamlit +
+# the in-process asyncio engine) does NOT use this file.
+#
+# Usage:
+#   export LT_TARGET_URL=https://your-authorized-target.example.com
+#   export LT_PATHS=/,/about,/products
+#   docker compose -f docker-compose.distributed.yml up --scale worker=4
+#
+# Then open the Locust master web UI at http://localhost:8089 and set the
+# number of users, spawn rate, and run time. Always configure a run time and
+# only target systems you are authorized to test.
+
+services:
+  master:
+    image: locustio/locust
+    ports:
+      - "8089:8089"
+    volumes:
+      - ./loadtest:/mnt/locust
+    environment:
+      - LT_TARGET_URL=${LT_TARGET_URL}
+      - LT_PATHS=${LT_PATHS:-/}
+      - LT_METHOD=${LT_METHOD:-GET}
+    command: >
+      -f /mnt/locust/locustfile.py
+      --master
+      --host ${LT_TARGET_URL}
+
+  worker:
+    image: locustio/locust
+    volumes:
+      - ./loadtest:/mnt/locust
+    environment:
+      - LT_TARGET_URL=${LT_TARGET_URL}
+      - LT_PATHS=${LT_PATHS:-/}
+      - LT_METHOD=${LT_METHOD:-GET}
+    command: >
+      -f /mnt/locust/locustfile.py
+      --worker
+      --master-host master
+    depends_on:
+      - master
