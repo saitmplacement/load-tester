@@ -61,17 +61,46 @@ cp .env.example .env               # optional: adjust defaults/caps
 
 ## 3. Running locally
 
+There are **two UIs**, both driving the same Python load engine — pick one:
+
+### Option A — Next.js UI + FastAPI backend (recommended)
+
+A professional React dashboard (Next.js + Tailwind + Recharts) talking to a
+FastAPI wrapper around the engine.
+
+```bash
+# Terminal 1 — backend (from the repo root, venv active)
+uvicorn api.main:app --port 8000 --reload
+
+# Terminal 2 — frontend
+cd web
+cp .env.local.example .env.local   # optional
+npm install
+npm run dev
+```
+
+Open **http://localhost:3000**. The frontend proxies `/api/*` to the backend,
+so there is nothing else to configure.
+
+Or launch both at once with the helper script:
+
+```bash
+./run-dev.sh      # backend on :8000, frontend on :3000
+```
+
+### Option B — Streamlit UI (zero Node required)
+
 ```bash
 streamlit run app.py
 ```
 
-Your browser opens at **http://localhost:8501**. Use the sidebar to switch
-between **Dashboard**, **Test History**, and **Settings**.
+Opens at **http://localhost:8501**.
 
-Run the tests:
+### Tests
 
 ```bash
-pytest
+pytest            # Python engine + API (51 tests)
+cd web && npm run build   # type-check + build the frontend
 ```
 
 ---
@@ -216,6 +245,13 @@ load-tester/
 │   ├── validators.py              # URL + private-address validation
 │   ├── metrics.py                 # aggregation, percentiles, thresholds
 │   └── database.py                # SQLite history + CSV/JSON export
+├── api/
+│   └── main.py                    # FastAPI backend wrapping the engine (REST)
+├── web/                           # Next.js + Tailwind + Recharts frontend
+│   ├── app/                       # App Router pages (dashboard/history/settings)
+│   ├── components/                # Sidebar, charts, metric tiles, badges
+│   └── lib/                       # typed API client + formatting helpers
+├── run-dev.sh                     # launch backend + frontend together
 ├── loadtest/
 │   ├── locustfile.py              # optional distributed engine
 │   └── scenarios.py               # shared scenario definitions
