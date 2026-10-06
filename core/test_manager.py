@@ -98,9 +98,17 @@ class LoadTest:
         summary = test.build_summary()
     """
 
-    def __init__(self, config: TestConfig, user_agent: str = "load-tester/1.0") -> None:
+    def __init__(
+        self,
+        config: TestConfig,
+        user_agent: str = "load-tester/1.0",
+        connection_pool_cap: int = 10000,
+    ) -> None:
         self.config = config
         self.user_agent = user_agent
+        # Cap the connection pool so very large VU counts cannot exhaust file
+        # descriptors / sockets on a single machine.
+        self.connection_pool_cap = max(1, connection_pool_cap)
         self.metrics = MetricsAggregator()
         self.state = EngineState()
         self._thread: threading.Thread | None = None
@@ -162,9 +170,11 @@ class LoadTest:
         if self._stop_requested.is_set():
             self._stop_event.set()
 
+        max_conns = min(self.config.virtual_users * 2, self.connection_pool_cap)
+        max_keepalive = min(self.config.virtual_users, self.connection_pool_cap)
         limits = httpx.Limits(
-            max_connections=self.config.virtual_users * 2,
-            max_keepalive_connections=self.config.virtual_users,
+            max_connections=max_conns,
+            max_keepalive_connections=max_keepalive,
         )
         timeout = httpx.Timeout(self.config.request_timeout_s)
         headers = {"User-Agent": self.user_agent}

@@ -46,12 +46,25 @@ class Settings(BaseModel):
 
     # ----- Hard safety caps (outer envelope; not editable from the UI) -----
     max_users_hard_cap: int = Field(
-        default_factory=lambda: _env_int("LT_MAX_USERS_HARD_CAP", 2000),
+        default_factory=lambda: _env_int("LT_MAX_USERS_HARD_CAP", 50000),
         description="Absolute ceiling on virtual users for a single local run.",
     )
     max_duration_hard_cap_s: int = Field(
         default_factory=lambda: _env_int("LT_MAX_DURATION_HARD_CAP_S", 1800),
         description="Absolute ceiling on test duration (seconds).",
+    )
+    # Soft advisory: above this, a single machine is usually the bottleneck and
+    # the distributed Locust cluster is the right tool. Not a hard limit — it
+    # only drives a prominent warning in the UI.
+    single_machine_recommended_max: int = Field(
+        default_factory=lambda: _env_int("LT_SINGLE_MACHINE_RECOMMENDED_MAX", 2000),
+        description="Advisory ceiling for realistic single-machine load generation.",
+    )
+    # Hard ceiling on the HTTP connection pool so very large VU counts cannot
+    # exhaust file descriptors / sockets and crash the engine.
+    max_connection_pool: int = Field(
+        default_factory=lambda: _env_int("LT_MAX_CONNECTION_POOL", 10000),
+        description="Upper bound on concurrent HTTP connections regardless of VUs.",
     )
 
     # ----- User-facing defaults (editable in the Settings page) -----

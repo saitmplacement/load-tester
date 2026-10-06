@@ -237,7 +237,11 @@ load-tester/
   test. `SafetyThresholds` holds the auto-stop limits. `TestSummary` is the
   persisted result.
 - **config/settings.py** — defaults loaded from `.env`, plus **hard caps**
-  (`max_users_hard_cap`, `max_duration_hard_cap_s`) that the UI cannot exceed.
+  (`max_users_hard_cap` default 50,000, `max_duration_hard_cap_s`) that the UI
+  cannot exceed, a soft `single_machine_recommended_max` (default 2,000) that
+  drives an in-UI warning, and `max_connection_pool` which bounds the HTTP
+  connection pool so large VU counts degrade gracefully instead of exhausting
+  file descriptors.
 - **core/validators.py** — fails closed: only unambiguous public HTTP/HTTPS
   targets pass unless private targets are explicitly enabled; unresolvable hosts
   are treated as unsafe.
@@ -265,6 +269,10 @@ load-tester/
 
 A single Mac is bounded by CPU, available file descriptors/sockets, and its own
 network stack. Past roughly a few thousand concurrent virtual users you are
-measuring **your laptop**, not the target. The hard caps keep local runs in a
-safe, meaningful range; use the distributed Locust mode (§10) for larger
-authorized tests.
+measuring **your laptop**, not the target — which is why the UI shows a warning
+above `single_machine_recommended_max` (default 2,000). The hard cap allows up
+to 50,000 virtual users for flexibility, and the connection pool is bounded so
+the engine degrades gracefully rather than crashing, but for tests at that
+scale you should use the **distributed Locust cluster** (§10) across multiple
+workers/machines. If you do push high counts locally, raise your file-descriptor
+limit first (`ulimit -n 100000`).

@@ -20,7 +20,7 @@ from pages.common import (
     settings_state,
 )
 
-_USER_PRESETS = [10, 25, 50, 100, 250, 500, 1000]
+_USER_PRESETS = [10, 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000]
 _DURATION_PRESETS = {
     "30 seconds": 30,
     "60 seconds": 60,
@@ -89,6 +89,15 @@ def _render_config_form(settings) -> None:
         else:
             users = int(preset)
         st.caption(f"Hard safety cap: {settings.max_users_hard_cap:,} users.")
+        if users > settings.single_machine_recommended_max:
+            st.warning(
+                f"⚠️ {users:,} virtual users exceeds the ~{settings.single_machine_recommended_max:,} "
+                "that a single machine can realistically generate. Past this point you are "
+                "likely measuring **your own machine**, not the target. For tests this large, "
+                "use the distributed Locust cluster (see the README / Advanced section) with "
+                "multiple workers.",
+                icon="⚠️",
+            )
 
         spawn_rate = st.number_input(
             "Ramp-up (users added per second)",
@@ -136,6 +145,35 @@ def _render_config_form(settings) -> None:
         tc2 = st.columns(2)
         rl = tc2[0].number_input("Max HTTP 429 rate (%)", 0.0, 100.0, th.max_rate_limit_pct, 0.5)
         se = tc2[1].number_input("Max HTTP 5xx rate (%)", 0.0, 100.0, th.max_server_error_pct, 0.5)
+
+    with st.expander("🧭 Advanced / Distributed Testing (for very large tests)"):
+        st.markdown(
+            f"""
+**{settings.single_machine_recommended_max:,}+ virtual users from one laptop is not realistic.**
+100,000 virtual users ≠ 100,000 Chrome windows — each virtual user is a
+concurrent request loop, and a single machine runs out of CPU, sockets, and
+file descriptors long before the target does.
+
+For large authorized tests, scale out with a **Locust master + workers**
+cluster (disabled by default, never auto-provisioned):
+
+```
+Local Dashboard → Load Controller (master) → Worker 1..N → Authorized Target
+```
+
+```bash
+export LT_TARGET_URL={url or "https://your-target.example.com"}
+export LT_PATHS=/,/about,/products
+docker compose -f docker-compose.distributed.yml up --scale worker=8
+# open the Locust UI at http://localhost:8089 and set users / spawn-rate / run-time
+```
+
+The local engine's connection pool is capped at
+**{settings.max_connection_pool:,}** so large VU counts degrade gracefully
+instead of crashing. See the README "Distributed testing architecture" section
+for details.
+"""
+        )
 
     st.divider()
     authorized = st.checkbox(AUTH_STATEMENT)
@@ -197,7 +235,11 @@ def _start_test(**kwargs) -> None:
         ))
         return
 
-    test = LoadTest(config, user_agent=settings.user_agent)
+    test = LoadTest(
+        config,
+        user_agent=settings.user_agent,
+        connection_pool_cap=settings.max_connection_pool,
+    )
     test.start()
     st.session_state.active_test = test
     st.session_state.last_summary_id = None
