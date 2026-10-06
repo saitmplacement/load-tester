@@ -289,6 +289,7 @@ class LoadTest:
     async def _monitor(self, deadline: float) -> None:
         """Sample metrics every second and enforce safety thresholds."""
         assert self._stop_event is not None
+        p95_breaches = 0
         while not self._stop_event.is_set():
             await asyncio.sleep(_MONITOR_INTERVAL_S)
             snap = self.metrics.snapshot(active_users=self.state.get_active())
@@ -309,6 +310,14 @@ class LoadTest:
                 self.metrics.rate_limit_count,
                 self.metrics.server_error_count,
             )
+            if reason == StopReason.P95_LATENCY:
+                # Ignore connection-setup warm-up and brief spikes: require a
+                # sustained breach before stopping on latency.
+                p95_breaches += 1
+                if snap.elapsed_seconds < 5 or p95_breaches < 3:
+                    continue
+            else:
+                p95_breaches = 0
             if reason is not None:
                 self.state.stop_reason = reason
                 logger.warning("Auto-stop triggered: %s", reason.value)
