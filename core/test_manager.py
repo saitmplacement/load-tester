@@ -177,7 +177,11 @@ class LoadTest:
             max_keepalive_connections=max_keepalive,
         )
         timeout = httpx.Timeout(self.config.request_timeout_s)
-        headers = {"User-Agent": self.user_agent}
+        headers = {
+            "User-Agent": self.user_agent,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        }
 
         deadline = time.monotonic() + self.config.duration_seconds
         worker_tasks: list[asyncio.Task] = []

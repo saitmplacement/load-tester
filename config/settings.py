@@ -103,7 +103,9 @@ class Settings(BaseModel):
     # ----- Identity -----
     user_agent: str = Field(
         default_factory=lambda: os.getenv(
-            "LT_USER_AGENT", "authorized-load-tester/1.0 (+local)"
+            "LT_USER_AGENT",
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
         )
     )
 
