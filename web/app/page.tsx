@@ -29,8 +29,8 @@ export default function DashboardPage() {
   const [pathsText, setPathsText] = useState("/");
   const [allowPrivate, setAllowPrivate] = useState(false);
   const [authorized, setAuthorized] = useState(false);
-  const [errThreshold, setErrThreshold] = useState(5);
-  const [p95Threshold, setP95Threshold] = useState(3000);
+  const [errThreshold, setErrThreshold] = useState(20);
+  const [p95Threshold, setP95Threshold] = useState(10000);
   const [rlThreshold, setRlThreshold] = useState(2);
   const [seThreshold, setSeThreshold] = useState(2);
 

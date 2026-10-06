@@ -84,7 +84,7 @@ class Settings(BaseModel):
         default_factory=lambda: _env_float("LT_DEFAULT_ERROR_THRESHOLD_PCT", 5.0)
     )
     default_p95_threshold_ms: float = Field(
-        default_factory=lambda: _env_float("LT_DEFAULT_P95_THRESHOLD_MS", 3000.0)
+        default_factory=lambda: _env_float("LT_DEFAULT_P95_THRESHOLD_MS", 10000.0)
     )
 
     # ----- Behaviour flags -----

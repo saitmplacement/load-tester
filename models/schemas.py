@@ -75,7 +75,7 @@ class SafetyThresholds(BaseModel):
         description="Stop if the overall error rate exceeds this percentage.",
     )
     max_p95_latency_ms: float = Field(
-        default=3000.0, ge=1.0,
+        default=10000.0, ge=1.0,
         description="Stop if P95 response time exceeds this many milliseconds.",
     )
     max_rate_limit_pct: float = Field(

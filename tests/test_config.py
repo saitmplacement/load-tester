@@ -71,5 +71,5 @@ def test_settings_clamp_users_and_duration() -> None:
 def test_threshold_defaults_are_conservative() -> None:
     th = SafetyThresholds()
     assert th.max_error_rate_pct == 5.0
-    assert th.max_p95_latency_ms == 3000.0
+    assert th.max_p95_latency_ms == 10000.0
     assert th.min_requests_before_eval >= 1

@@ -89,7 +89,7 @@ class StartRequest(BaseModel):
     allow_private_targets: bool = False
     authorized: bool = False
     max_error_rate_pct: float = 5.0
-    max_p95_latency_ms: float = 3000.0
+    max_p95_latency_ms: float = 10000.0
     max_rate_limit_pct: float = 2.0
     max_server_error_pct: float = 2.0
 
