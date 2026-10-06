@@ -68,9 +68,24 @@ class MetricsAggregator:
     _start_monotonic: float = field(default_factory=time.monotonic)
     rate_limit_count: int = 0  # HTTP 429
     server_error_count: int = 0  # HTTP 5xx
+    error_kinds: dict[str, int] = field(default_factory=dict)
+
+    def describe_errors(self, limit: int = 3) -> str:
+        """Top failure causes, e.g. 'HTTP 403 x120, ConnectTimeout x30'."""
+        with self._lock:
+            causes = dict(self.error_kinds)
+            for code, n in self.status_counts.items():
+                if code >= 400:
+                    causes[f"HTTP {code}"] = causes.get(f"HTTP {code}", 0) + n
+        top = sorted(causes.items(), key=lambda kv: -kv[1])[:limit]
+        return ", ".join(f"{k} x{v}" for k, v in top)
 
     def record(
-        self, status_code: int, latency_ms: float, success: bool
+        self,
+        status_code: int,
+        latency_ms: float,
+        success: bool,
+        error_kind: str | None = None,
     ) -> None:
         """Record a single completed (or failed) request."""
         with self._lock:
@@ -81,6 +96,8 @@ class MetricsAggregator:
                 self.failed += 1
 
             self.status_counts[status_code] = self.status_counts.get(status_code, 0) + 1
+            if error_kind:
+                self.error_kinds[error_kind] = self.error_kinds.get(error_kind, 0) + 1
             if status_code == 429:
                 self.rate_limit_count += 1
             elif 500 <= status_code <= 599:

@@ -276,15 +276,9 @@ class LoadTest:
                 latency_ms = (time.perf_counter() - started) * 1000.0
                 success = resp.status_code < 400
                 self.metrics.record(resp.status_code, latency_ms, success)
-            except httpx.TimeoutException:
+            except Exception as exc:  # noqa: BLE001 - never let a worker kill the loop
                 latency_ms = (time.perf_counter() - started) * 1000.0
-                self.metrics.record(0, latency_ms, False)
-            except httpx.HTTPError:
-                latency_ms = (time.perf_counter() - started) * 1000.0
-                self.metrics.record(0, latency_ms, False)
-            except Exception:  # noqa: BLE001 - never let a worker kill the loop
-                latency_ms = (time.perf_counter() - started) * 1000.0
-                self.metrics.record(0, latency_ms, False)
+                self.metrics.record(0, latency_ms, False, type(exc).__name__)
 
     async def _monitor(self, deadline: float) -> None:
         """Sample metrics every second and enforce safety thresholds."""
@@ -328,6 +322,9 @@ class LoadTest:
     def stop_reason_text(self) -> str:
         reason = self.state.stop_reason or StopReason.COMPLETED
         base = HUMAN_READABLE_STOP_REASON.get(reason, reason.value)
+        causes = self.metrics.describe_errors()
+        if causes and reason != StopReason.COMPLETED:
+            base += f" Main failures: {causes}."
         if reason == StopReason.ENGINE_ERROR and self.state.error_message:
             return f"{base} ({self.state.error_message})"
         return base
